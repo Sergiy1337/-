@@ -1,0 +1,169 @@
+from datetime import datetime
+import json
+import os
+
+DB_FILE = "books.json"
+
+
+def load_books():
+    """Загружает список книг из файла JSON."""
+    if not os.path.exists(DB_FILE):
+        return []
+    try:
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return []  
+
+
+def save_books(books):
+    """Сохраняет список книг в файл JSON."""
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(books, f, ensure_ascii=False, indent=4)
+
+
+def add_book(books):
+    """Добавляет новую книгу в список с валидацией данных и проверкой дубликатов."""
+    print("\n--- Добавление новой книги ---")
+    author = input("Введите автора: ").strip()
+    title = input("Введите название книги: ").strip()
+
+    # Шаг 8 (Работа с Issues): Проверка на дубликаты (автор + название)
+    for book in books:
+        if (
+            book["author"].lower() == author.lower()
+            and book["title"].lower() == title.lower()
+        ):
+            print("\nОшибка: Такая книга уже есть в вашем трекере!")
+            return books
+
+    # Валидация оценки (строго целое число от 1 до 5)
+    while True:
+        try:
+            score = int(input("Введите оценку (от 1 до 5): "))
+            if 1 <= score <= 5:
+                break
+            print("Ошибка: Оценка должна быть в диапазоне от 1 до 5.")
+        except ValueError:
+            print("Ошибка: Введите корректное целое число.")
+
+    while True:
+        date_str = input("Введите дату прочтения (ДД.ММ.ГГГГ): ").strip()
+        try:
+            datetime.strptime(date_str, "%d.%m.%Y")
+            break
+        except ValueError:
+            print("Ошибка: Неверный формат даты. Используйте ДД.ММ.ГГГГ")
+
+    new_book = {
+        "author": author,
+        "title": title,
+        "score": score,
+        "date": date_str,
+    }
+
+    books.append(new_book)
+    save_books(books)
+    print(f"\nКнига «{title}» успешно добавлена!")
+    return books
+
+
+def show_all_books(books):
+    """Выводит список всех сохраненных книг."""
+    if not books:
+        print("\nВаш трекер пока пуст. Самое время добавить первую книгу!")
+        return
+    print("\n--- Список всех книг ---")
+    for idx, book in enumerate(books, 1):
+        print(
+            f"{idx}. {book['author']} — «{book['title']}» | "
+            f"Оценка: {book['score']} | Дата: {book['date']}"
+        )
+
+
+def show_average_score(books):
+    """Считает и выводит среднюю оценку."""
+    if not books:
+        print("\nНет данных для расчета средней оценки.")
+        return
+    total = sum(book["score"] for book in books)
+    avg = total / len(books)
+    print(f"\nСредняя оценка всех прочитанных книг: {avg:.2f}")
+
+
+def show_author_stats(books):
+    """Выводит статистику: количество книг по каждому автору."""
+    if not books:
+        print("\nНет данных для вывода статистики.")
+        return
+    stats = {}
+    for book in books:
+        author = book["author"]
+        stats[author] = stats.get(author, 0) + 1
+
+    print("\n--- Статистика по авторам ---")
+    for author, count in stats.items():
+        print(f"{author}: {count} кн.")
+
+
+def delete_book(books):
+    """Удаляет книгу из списка по её порядковому номеру (индексу)."""
+    if not books:
+        print("\nТрекер пуст, удалять нечего.")
+        return books
+
+    show_all_books(books)
+
+    while True:
+        choice = (
+            input("\nВведите номер книги для удаления (или '0' для отмены): ")
+            .strip()
+        )
+        if choice == "0":
+            print("Удаление отменено.")
+            return books
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(books):
+                removed = books.pop(idx)
+                save_books(books)
+                print(f"\nКнига «{removed['title']}» успешно удалена!")
+                return books
+            print("Ошибка: Книги с таким номером нет в списке.")
+        except ValueError:
+            print("Ошибка: Пожалуйста, введите корректный числовой номер.")
+
+
+def main():
+    books = load_books()
+
+    while True:
+        print("\n=== ТРЕКЕР ПРОЧИТАННЫХ КНИГ ===")
+        print("1. Добавить книгу")
+        print("2. Показать все книги")
+        print("3. Показать среднюю оценку")
+        print("4. Статистика по авторам")
+        print("5. Удалить книгу")
+        print("6. Выход")
+
+        choice = input("\nВыберите действие (1-6): ").strip()
+
+        if choice == "1":
+            books = add_book(books)
+        elif choice == "2":
+            show_all_books(books)
+        elif choice == "3":
+            show_average_score(books)
+        elif choice == "4":
+            show_author_stats(books)
+        elif choice == "5":
+            books = delete_book(books)
+        elif choice == "6":
+            print("\nВыход из программы. Спасибо, что использовали трекер!")
+            break
+        else:
+            print("\nОшибка: неверный пункт меню. Попробуйте снова (1-6).")
+
+
+if __name__ == "__main__":
+    main()
